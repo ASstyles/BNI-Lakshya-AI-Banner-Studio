@@ -1,1 +1,14 @@
-
+{
+  "chapterName": "BNI Lakshya",
+  "primaryColor": "#cf142b",
+  "secondaryColor": "#d4af37",
+  "fontPrimary": "Montserrat",
+  "fontSecondary": "Inter",
+  "footerText": "BNI Lakshya Pune Chapter • Together Everyone Achieves More",
+  "defaultVenue": "Conrad Pune, Mangaldas Rd",
+  "defaultTime": "Thursday, 7:15 AM",
+  "defaultCta": "DM us to attend as a visitor",
+  "geminiApiKey": "AQ.Ab8RN6ISb_AYHvFnTslijJAebC5iwlbAbGFb0Mr8DzimqT36HA",
+  "grokApiKey": "",
+  "errorCount": 1
+}
