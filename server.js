@@ -20,7 +20,8 @@ const PORT = process.env.PORT || 3000;
 const ACCESS_CODE = process.env.ACCESS_CODE || "LAKSHYA2026";
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Create data directory if it doesn't exist
@@ -41,8 +42,8 @@ async function getSettings() {
 
   return {
     chapterName: "BNI Lakshya",
-    primaryColor: "#CF142B",
-    secondaryColor: "#D4AF37",
+    primaryColor: "#CF2030",
+    secondaryColor: "#C8C8C8",
     footerText: "",
     defaultVenue: "",
     defaultTime: "Thursday, 7:15 AM",
@@ -209,27 +210,34 @@ app.post('/api/auth/login', (req, res) => {
     };
   }
 
-  app.get("/api/user/:uid", async (req,res)=>{
-      try{
+  
+  app.get("/api/user/:uid", async (req, res) => {
+      try {
           const uid = req.params.uid;
+          const doc = await db.collection("users").doc(uid).get();
 
-          const doc =await db.collection("users").doc(uid).get();
-
-          if(!doc.exists){
-              return res.status(404).json({
-                  error:"User not found"
-              });
+          if (!doc.exists) {
+              return res.status(404).json({ error: "User not found" });
           }
-          res.json(doc.data());
 
-      }catch(err){
+          const userData = doc.data();  // ← get the data first
 
-          res.status(500).json({
-              error: err.message
-          });
+          if (userData.status === "pending") {  // ← check BEFORE sending
+              return res.status(403).json({ success: false, message: "Your account is pending admin approval." });
+          }
+
+          return res.json(userData);  // ← send only if approved
+
+      } catch (err) {
+          res.status(500).json({ error: err.message });
       }
   });
 
+  // Admin Approval Route
+  app.post("/api/users/:uid/approve", async (req, res) => {
+      await db.collection("users").doc(req.params.uid).update({ status: "approved" });
+      res.json({ success: true });
+  });
 
   app.get("/api/banners/user/:uid", async (req, res) => {
 
@@ -259,7 +267,37 @@ app.post('/api/auth/login', (req, res) => {
       }
   });
 
-//Admin Banner shows
+  // Check if email exists in users collection (used for forgot password)
+  app.post("/api/check-email", async (req, res) => {
+      try {
+          const { email } = req.body;
+          if (!email) return res.status(400).json({ exists: false, isPending: false });
+
+          // Check approved users
+          const userSnap = await db.collection("users")
+              .where("email", "==", email).get();
+
+          if (!userSnap.empty) {
+              return res.json({ exists: true, isPending: false });
+          }
+
+          // Check pending users
+          const pendingSnap = await db.collection("pending_users")
+              .where("email", "==", email).get();
+
+          if (!pendingSnap.empty) {
+              return res.json({ exists: false, isPending: true });
+          }
+
+          res.json({ exists: false, isPending: false });
+
+      } catch (error) {
+          console.error("Check email error:", error);
+          res.status(500).json({ exists: false, isPending: false, message: error.message });
+      }
+  });
+
+  //Admin Banner shows
   app.get("/api/banners", async (req, res) => {
 
     try {
@@ -281,6 +319,40 @@ app.post('/api/auth/login', (req, res) => {
       res.status(500).json({
         message: error.message
       });
+    }
+  });
+
+  // Create exports directory if it doesn't exist
+  const exportsDir = path.join(__dirname, "public", "exports");
+  if (!fs.existsSync(exportsDir)) {
+    fs.mkdirSync(exportsDir, { recursive: true });
+  }
+
+  // Upload image route
+  app.post("/api/upload-image", async (req, res) => {
+    try {
+      const { image } = req.body;
+      if (!image) {
+        return res.status(400).json({ success: false, message: "No image data provided" });
+      }
+
+      // Expecting data:image/png;base64,...
+      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return res.status(400).json({ success: false, message: "Invalid image format" });
+      }
+
+      const imageBuffer = Buffer.from(matches[2], 'base64');
+      const filename = `banner_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.png`;
+      const filePath = path.join(exportsDir, filename);
+
+      await fs.promises.writeFile(filePath, imageBuffer);
+      
+      const imageUrl = `/exports/${filename}`;
+      res.json({ success: true, imageUrl });
+    } catch (error) {
+      console.error("Upload image error:", error);
+      res.status(500).json({ success: false, message: error.message });
     }
   });
 
@@ -393,41 +465,222 @@ app.post('/api/auth/login', (req, res) => {
 
   app.post("/api/register", async (req, res) => {
       try {
-        console.log("Register endpoint hit");
-      console.log(req.body);
-          const { name, email, password, role } = req.body;
+          console.log("Register endpoint hit");
+          console.log(req.body);
 
-          const userRecord = await admin.auth().createUser({
-              email,
-              password,
-              displayName: name
-          });
+          const { name, email, password } = req.body;
 
-          await admin.firestore()
-              .collection("users")
-              .doc(userRecord.uid)
-              .set({
-                  name,
-                  email,
-                  role,
-                  createdAt: new Date().toISOString()
+          // Step 1: Check if email already exists in pending_users or users collection
+          const existingPending = await db.collection("pending_users")
+              .where("email", "==", email).get();
+
+          if (!existingPending.empty) {
+              return res.status(400).json({
+                  success: false,
+                  message: "A registration request for this email is already pending approval."
               });
+          }
+
+          const existingUser = await db.collection("users")
+              .where("email", "==", email).get();
+
+          if (!existingUser.empty) {
+              return res.status(400).json({
+                  success: false,
+                  message: "An account with this email already exists."
+              });
+          }
+
+          // Step 2: Save registration request in pending_users collection
+          // Firebase Auth account is NOT created yet — only created after admin approves
+          const pendingRef = await db.collection("pending_users").add({
+              name,
+              email,
+              password,           // stored temporarily for account creation on approval
+              role: "member",     // always member — admin is set via backend only
+              status: "pending",
+              createdAt: new Date().toISOString()
+          });
 
           res.status(201).json({
               success: true,
-              uid: userRecord.uid
+              pendingId: pendingRef.id,
+              message: "Registration request submitted. Awaiting admin approval."
           });
 
       } catch (error) {
-
-          console.error(error);
-
+          console.error("Register error:", error);
           res.status(500).json({
               success: false,
               message: error.message
           });
       }
   });
+
+
+  // GET /api/all-users — all registration requests with status
+  app.get("/api/all-users", async (req, res) => {
+      try {
+          const snapshot = await db.collection("pending_users").get();
+          const users = [];
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              users.push({
+                  id: doc.id,
+                  name: data.name,
+                  email: data.email,
+                  role: data.role,
+                  status: data.status,
+                  createdAt: data.createdAt,
+                  rejectedAt: data.rejectedAt || null
+              });
+          });
+
+          // Also fetch approved users from users collection
+          const approvedSnap = await db.collection("users").get();
+          approvedSnap.forEach(doc => {
+              const data = doc.data();
+              if (data.role !== "admin") {
+                  users.push({
+                      id: doc.id,
+                      name: data.name,
+                      email: data.email,
+                      role: data.role,
+                      status: "approved",
+                      createdAt: data.createdAt,
+                      approvedAt: data.approvedAt || null
+                  });
+              }
+          });
+
+          res.json({ success: true, users });
+      } catch (error) {
+          res.status(500).json({ success: false, message: error.message });
+      }
+  });
+
+  // Called by admin panel to show members awaiting approval
+  app.get("/api/pending-users", async (req, res) => {
+      try {
+          const snapshot = await db.collection("pending_users")
+              .where("status", "==", "pending")
+              // .orderBy("createdAt", "desc")
+              .get();
+
+          const users = [];
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              users.push({
+                  id: doc.id,
+                  name: data.name,
+                  email: data.email,
+                  role: data.role,
+                  createdAt: data.createdAt
+              });
+          });
+
+          res.json({ success: true, users });
+
+      } catch (error) {
+          console.error("Pending users error:", error);
+          res.status(500).json({ success: false, message: error.message });
+      }
+  });
+
+
+  app.post("/api/approve-user/:id", async (req, res) => {
+      try {
+          const pendingId = req.params.id;
+
+          // Get the pending user record
+          const pendingDoc = await db.collection("pending_users").doc(pendingId).get();
+
+          if (!pendingDoc.exists) {
+              return res.status(404).json({ success: false, message: "Pending user not found." });
+          }
+
+          const { name, email, password, role } = pendingDoc.data();
+
+          // Step 1: Create Firebase Auth account now that admin has approved
+          const userRecord = await admin.auth().createUser({
+              email,
+              password,
+              displayName: name
+          });
+
+          // Step 2: Save to users collection (official approved member)
+          await db.collection("users").doc(userRecord.uid).set({
+              name,
+              email,
+              role: role || "member",
+              status: "approved",
+              approvedAt: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+          });
+
+          // Step 3: Remove from pending_users
+          await db.collection("pending_users").doc(pendingId).delete();
+
+          res.json({ success: true, message: `${name} has been approved successfully.` });
+
+        } catch (error) {
+            console.error("Approve user error:", error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
+
+ 
+  // admin rejects a member
+  app.delete("/api/reject-user/:id", async (req, res) => {
+      try {
+          const pendingDoc = await db.collection("pending_users").doc(req.params.id).get();
+          if (!pendingDoc.exists) {
+              return res.status(404).json({ success: false, message: "Pending user not found." });
+          }
+          // ✅ Status update karo, delete nahi
+          await db.collection("pending_users").doc(req.params.id).update({
+              status: "rejected",
+              rejectedAt: new Date().toISOString()
+          });
+          res.json({ success: true, message: `${pendingDoc.data().name}'s registration has been rejected.` });
+      } catch (error) {
+          console.error("Reject user error:", error);
+          res.status(500).json({ success: false, message: error.message });
+      }
+  });
+
+  // update user password directly
+  app.post("/api/reset-password", async (req, res) => {
+      try {
+          const { email, newPassword } = req.body;
+
+          if (!email || !newPassword) {
+              return res.status(400).json({ success: false, message: "Email and new password are required." });
+          }
+
+          if (newPassword.length < 6) {
+              return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+          }
+
+          // Get user by email from Firebase Auth
+          const userRecord = await admin.auth().getUserByEmail(email);
+
+          // Update password in Firebase Auth
+          await admin.auth().updateUser(userRecord.uid, { password: newPassword });
+
+          res.json({ success: true, message: "Password updated successfully." });
+
+      } catch (error) {
+          console.error("Reset password error:", error);
+
+          if (error.code === "auth/user-not-found") {
+              return res.status(404).json({ success: false, message: "No account found with this email." });
+          }
+
+          res.status(500).json({ success: false, message: error.message });
+      }
+  });
+
 
 
   app.post("/api/banners", async (req, res) => {
