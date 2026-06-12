@@ -125,6 +125,11 @@ const api = {
     return this.request('/api/settings', 'POST', settingsData);
   },
 
+  // Upload image
+  uploadImage: async function(base64Image) {
+    return this.request("/api/upload-image", "POST", { image: base64Image });
+  },
+
   // Generate copy
   generateCopy: async function(inputData) {
     return this.request('/api/generate-copy', 'POST', inputData);

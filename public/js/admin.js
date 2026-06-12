@@ -14,8 +14,8 @@ const admin = {
     document.getElementById('admin-primary-color-hex').value = settings.primaryColor || '#CF142B';
 
     // Secondary Color
-    document.getElementById('admin-secondary-color').value = settings.secondaryColor || '#D4AF37';
-    document.getElementById('admin-secondary-color-hex').value = settings.secondaryColor || '#D4AF37';
+    document.getElementById('admin-secondary-color').value = settings.secondaryColor || '#C8C8C8';
+    document.getElementById('admin-secondary-color-hex').value = settings.secondaryColor || '#C8C8C8';
 
     // Meeting defaults
     document.getElementById('admin-default-time').value = settings.defaultTime || 'Thursday, 7:15 AM';

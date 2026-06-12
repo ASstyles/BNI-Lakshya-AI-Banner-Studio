@@ -19,10 +19,15 @@ const bannerRenderer = {
 
     // Reset classes
     container.className = '';
-    
+
     // Add layout and style classes
     container.classList.add(`aspect-${aspectRatio}`);
     container.classList.add(`template-${style}`);
+
+    // Reset any previously applied background photo
+    container.style.backgroundImage = '';
+    container.style.backgroundSize = '';
+    container.style.backgroundPosition = '';
 
     // Retrieve template renderer
     const template = BANNER_TEMPLATES[style];
@@ -39,6 +44,11 @@ const bannerRenderer = {
 
     // Resize container preview to fit viewport nicely
     this.adjustPreviewSize();
+
+    // Trigger photo selector UI in sidebar after render
+    if (typeof renderPhotoSelector === 'function') {
+      renderPhotoSelector(copy.category, style);
+    }
   },
 
   // Bind keyup/input listeners for editable elements to sync changes back to currentCopy
@@ -56,7 +66,7 @@ const bannerRenderer = {
         } else if (type === 'bullet' && index !== undefined) {
           this.currentCopy.bulletPoints[parseInt(index)] = val;
         }
-        
+
         // Dynamic caption updates if text is edited
         if (typeof app !== 'undefined' && app.updateCaptionsText) {
           app.updateCaptionsText();
@@ -88,27 +98,21 @@ const bannerRenderer = {
     // Find fit scale
     const scaleX = parentWidth / targetWidth;
     const scaleY = parentHeight / targetHeight;
-    // We want to scale it so it fits nicely inside parent
     const scale = Math.min(scaleX, scaleY, 0.45); // Max display scale is 0.45 for safety
 
     preview.style.transform = `scale(${scale})`;
-    
-    // Set parent heights to matches scaled canvas height
+
+    // Set parent height to match scaled canvas height
     parent.style.height = `${(targetHeight * scale) + 40}px`;
   },
 
-  // Safe pre-loading of custom fonts
+  // Arial and Helvetica Neue are system fonts — no loading needed
   ensureFontsLoaded: async function() {
     try {
       await document.fonts.ready;
-      await Promise.all([
-        document.fonts.load('1rem Montserrat'),
-        document.fonts.load('1rem Inter'),
-        document.fonts.load('1rem Outfit')
-      ]);
       return true;
     } catch (err) {
-      console.warn('Google fonts failed to load dynamically, using fallbacks.', err);
+      console.warn('Font check failed, using system fonts.', err);
       return false;
     }
   },
@@ -119,14 +123,14 @@ const bannerRenderer = {
     if (!preview) return;
 
     utils.showToast('Rendering high-resolution image...');
-    
+
     // Load fonts first
     await this.ensureFontsLoaded();
 
     // Disable scaling transform temporarily so html2canvas renders the actual size
     const originalTransform = preview.style.transform;
     const originalPosition = preview.style.position;
-    
+
     preview.style.transform = 'none';
     preview.style.position = 'relative';
 
@@ -135,12 +139,11 @@ const bannerRenderer = {
       await new Promise(r => setTimeout(r, 150));
 
       const canvas = await html2canvas(preview, {
-          scale: 2,
-          backgroundColor: "#111111",
-          useCORS: true,
-          logging: true
+        scale: 2,
+        backgroundColor: null, // transparent — template provides its own background
+        useCORS: true,
+        logging: false          // turn off noisy console logs
       });
-
 
       console.log("Canvas Width:", canvas.width);
       console.log("Canvas Height:", canvas.height);
@@ -154,9 +157,6 @@ const bannerRenderer = {
       preview.style.transform = originalTransform;
       preview.style.position = originalPosition;
 
-      // Extract image URL
-      // const dataUrl = canvas.toDataURL('image/png');
-
       // Create download filename
       const categoryName = this.currentCopy.visitorCategory || 'Invite';
       const cleanCategory = categoryName.replace(/[^a-zA-Z0-9]/g, '_');
@@ -164,10 +164,10 @@ const bannerRenderer = {
 
       // Trigger download
       if (triggerDownload) {
-          const link = document.createElement('a');
-          link.download = filename;
-          link.href = dataUrl;
-          link.click();
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
       }
 
       // Return data so we can log to history
@@ -189,14 +189,15 @@ const bannerRenderer = {
 
 // Window resize adjust listener
 window.addEventListener('resize', () => {
-  if (document.getElementById('screen-preview-export') && !document.getElementById('screen-preview-export').classList.contains('hidden')) {
+  if (
+    document.getElementById('screen-preview-export') &&
+    !document.getElementById('screen-preview-export').classList.contains('hidden')
+  ) {
     bannerRenderer.adjustPreviewSize();
   }
 });
 
 window.bannerRenderer = bannerRenderer;
 
-
 console.log("renderer.js finished");
-window.bannerRenderer = bannerRenderer;
 console.log(window.bannerRenderer);
