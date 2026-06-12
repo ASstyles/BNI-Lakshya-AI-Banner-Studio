@@ -4,12 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BNI Lakshya AI Banner Studio</title>
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- BNI approved fonts: Arial and Helvetica Neue are system fonts, no import needed -->
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=1.0.1">
   <!-- html2canvas for image generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -19,14 +16,14 @@
   <header id="main-nav" class="hidden">
     <div class="nav-container">
       <div class="nav-brand">
-        <span class="brand-bni">BNI</span>
+        <img src="/assets/bni-logo-white.png" alt="BNI" style="height:28px; display:block;" onerror="this.style.display='none'">
         <span class="brand-title">Lakshya Banner Studio</span>
-        <span class="badge-poc">POC</span>
       </div>
       <nav class="nav-links">
         <span id="nav-username"></span>
         <button id="nav-btn-create" class="nav-link active" onclick="app.showScreen('screen-select-type')">Create Banner</button>
         <button id="nav-btn-history" class="nav-link" onclick="app.showScreen('screen-history')">History</button>
+        <button id="nav-btn-users" class="nav-link hidden" onclick="app.showScreen('screen-users')">Approvals</button>
         <button id="nav-btn-admin" class="nav-link" onclick="app.showScreen('screen-admin')">Admin Settings</button>
         <button id="nav-btn-logout" class="nav-btn-secondary" onclick="app.logout()">Logout</button>
       </nav>
@@ -40,10 +37,7 @@
     <section id="screen-login" class="screen active">
         <div class="login-card glass-panel">
 
-            <div class="bni-crest">
-                <div class="crest-bg"></div>
-                <span class="crest-text">L</span>
-            </div>
+            <img src="/assets/bni-logo-red.png" alt="BNI" style="height:64px; margin: 0 auto 1.5rem; display:block;" onerror="this.style.display='none'">
 
             <h1>BNI Lakshya Banner Studio</h1>
 
@@ -61,6 +55,11 @@
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" id="password" placeholder="Enter Password" required>
+                </div>
+
+                <!-- Forgot Password Link -->
+                <div class="forgot-password-link">
+                    <a href="#" onclick="app.showForgotPassword(); return false;">Forgot Password?</a>
                 </div>
 
                 <div id="login-error" class="error-message hidden">
@@ -84,6 +83,81 @@
         </div>
     </section>
 
+    <!-- SCREEN: FORGOT PASSWORD -->
+    <!-- SCREEN: FORGOT PASSWORD -->
+<section id="screen-forgot-password" class="screen hidden">
+    <div class="login-card glass-panel">
+
+        <img src="/assets/bni-logo-red.png" alt="BNI" style="height:64px; margin: 0 auto 1.5rem; display:block;" onerror="this.style.display='none'">
+
+        <h1 id="forgot-screen-title">Reset Password</h1>
+        <p class="subtitle" id="forgot-screen-subtitle">
+            Enter your registered email. Password fields will unlock after verification.
+        </p>
+
+        <div id="forgot-form-wrapper">
+
+            <!-- Email Field -->
+            <div class="form-group">
+                <label>Email Address</label>
+                <input
+                    type="email"
+                    id="forgot-email"
+                    placeholder="Enter your registered email"
+                    oninput="app.clearForgotError()"
+                >
+            </div>
+
+            <!-- New Password — disabled until email verified -->
+            <div class="form-group">
+                <label>New Password</label>
+                <input
+                    type="password"
+                    id="forgot-new-password"
+                    placeholder="Enter new password (min 6 characters)"
+                    disabled
+                    style="opacity: 0.4; cursor: not-allowed;"
+                    oninput="app.clearForgotError()"
+                >
+            </div>
+
+            <!-- Confirm Password — disabled until email verified -->
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input
+                    type="password"
+                    id="forgot-confirm-password"
+                    placeholder="Re-enter new password"
+                    disabled
+                    style="opacity: 0.4; cursor: not-allowed;"
+                    oninput="app.clearForgotError()"
+                >
+            </div>
+
+            <div id="forgot-error" class="forgot-error-msg hidden"></div>
+            <div id="forgot-success" class="forgot-success-msg hidden">
+                ✅ Password updated successfully! Redirecting to login...
+            </div>
+
+            <button
+                id="forgot-submit-btn"
+                class="btn-primary"
+                style="width: 100%; margin-top: 0.5rem;"
+                onclick="app.handleForgotPassword()"
+            >
+                Verify Email
+            </button>
+
+            <div class="auth-footer">
+                <p>
+                    Remembered your password?
+                    <a href="#" onclick="app.hideForgotPassword(); return false;">Back to Login</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</section>
       <section id="screen-register" class="screen hidden">
           <div class="login-card glass-panel">
               <h1>Create Account</h1>
@@ -103,14 +177,15 @@
                         <input type="password" id="register-password" placeholder="Enter Password" required>
                     </div>
 
-                    <div class="form-group">
+                    <!-- <div class="form-group">
                         <label>USER TYPE</label>
                         <select id="register-role" required>
                             <option value="">Select User Type</option>
                             <option value="member">Member</option>
                             <option value="admin">Admin</option>
                         </select>
-                    </div>
+                    </div> -->
+
                   <button type="submit" class="btn-primary"> Register </button>
               </form>
 
@@ -125,32 +200,49 @@
 
     <!-- SCREEN 2: CHOOSE BANNER TYPE -->
     <section id="screen-select-type" class="screen hidden">
-      <div class="welcome-banner">
-        <h2>Welcome to BNI Lakshya Banner Studio</h2>
-        <p>What would you like to create today? Select a banner category to begin your guided setup.</p>
+      <div class="welcome-header-panel">
+        <h2>Welcome back, <span id="welcome-username" class="welcome-user-accent">User</span>!</h2>
+        <p>Choose a banner category below to start your quick guided generator setup.</p>
       </div>
 
-      <div class="category-grid">
-        <!-- Card 1 -->
-        <div class="category-card glass-panel" onclick="app.startWizard('visitor_invite')">
-          <div class="card-icon invite-icon"></div>
-          <h3>Visitor Invite Banner</h3>
-          <p>Invite specific business categories to our chapter. Highlights mutual connections and referral pipelines.</p>
-          <span class="btn-card">Select</span>
+      <div class="category-selection-grid">
+        <!-- Card 1: Visitor Invite -->
+        <div class="workflow-card glass-panel" onclick="app.startWizard('visitor_invite')">
+          <div class="workflow-card-img" style="background-image: url('/assets/stock/bni-networking-1.jpg');"></div>
+          <div class="workflow-card-content">
+            <div class="workflow-header-group">
+              <div class="card-icon invite-icon"></div>
+              <h3>Visitor Invite</h3>
+            </div>
+            <p>Invite specific business categories to our chapter. Highlights mutual connections and referral pipelines.</p>
+            <span class="btn-workflow">Start Setup <span class="arrow-icon">➔</span></span>
+          </div>
         </div>
-        <!-- Card 2 -->
-        <div class="category-card glass-panel" onclick="app.startWizard('weekly_meeting')">
-          <div class="card-icon meeting-icon"></div>
-          <h3>Weekly Meeting Invite</h3>
-          <p>Promote the next upcoming Thursday chapter meeting. Highlights time, venue, and general visitor invitation.</p>
-          <span class="btn-card">Select</span>
+
+        <!-- Card 2: Weekly Meeting -->
+        <div class="workflow-card glass-panel" onclick="app.startWizard('weekly_meeting')">
+          <div class="workflow-card-img" style="background-image: url('/assets/stock/bni-meeting-1.jpg');"></div>
+          <div class="workflow-card-content">
+            <div class="workflow-header-group">
+              <div class="card-icon meeting-icon"></div>
+              <h3>Weekly Meeting</h3>
+            </div>
+            <p>Promote the next upcoming Thursday chapter meeting. Highlights time, venue, and general visitor invitation.</p>
+            <span class="btn-workflow">Start Setup <span class="arrow-icon">➔</span></span>
+          </div>
         </div>
-        <!-- Card 3 -->
-        <div class="category-card glass-panel" onclick="app.startWizard('feature_presentation')">
-          <div class="card-icon speaker-icon"></div>
-          <h3>Feature Presentation</h3>
-          <p>Highlight a member's 10-minute presentation. Perfect for promoting speakers on social feeds.</p>
-          <span class="btn-card">Select</span>
+
+        <!-- Card 3: Feature Presentation -->
+        <div class="workflow-card glass-panel" onclick="app.startWizard('feature_presentation')">
+          <div class="workflow-card-img" style="background-image: url('/assets/stock/bni-speaker-1.jpg');"></div>
+          <div class="workflow-card-content">
+            <div class="workflow-header-group">
+              <div class="card-icon speaker-icon"></div>
+              <h3>Feature Presentation</h3>
+            </div>
+            <p>Highlight a member's 10-minute presentation. Perfect for promoting speakers on social feeds.</p>
+            <span class="btn-workflow">Start Setup <span class="arrow-icon">➔</span></span>
+          </div>
         </div>
       </div>
     </section>
@@ -258,6 +350,11 @@
             <label for="edit-cta">Call to Action (CTA)</label>
             <input type="text" id="edit-cta" required>
           </div>
+          
+          <div class="form-group">
+            <label for="edit-cta-link">CTA Hyperlink URL (Optional)</label>
+            <input type="url" id="edit-cta-link" placeholder="e.g. https://wa.me/1234567890 or RSVP form URL">
+          </div>
         </div>
 
         <div class="ai-source-badge">
@@ -286,20 +383,23 @@
             <div class="style-options">
               <button class="btn-style active" onclick="app.changeTemplateStyle('premium')">
                 <span class="style-preview premium"></span>
-                <span class="style-name">Premium Corporate</span>
+                <span class="style-name">Clean Corporate Split</span>
               </button>
               
               <button class="btn-style" onclick="app.changeTemplateStyle('gold')">
                 <span class="style-preview gold"></span>
-                <span class="style-name">Golden Opportunity</span>
+                <span class="style-name">Minimalist Light</span>
               </button>
 
               <button class="btn-style" onclick="app.changeTemplateStyle('spotlight')">
                 <span class="style-preview spotlight"></span>
-                <span class="style-name">Spotlight Focus</span>
+                <span class="style-name">Crimson Split</span>
               </button>
             </div>
           </div>
+
+          <!-- Photo Selector — populated dynamically by templates.js -->
+          <div id="photo-selector-container"></div>
 
           <!-- Quick Layout Stats -->
           <div class="control-group">
@@ -362,6 +462,27 @@
         <h2>Your Generated Banners</h2>
         <p>Browse previously generated banners saved in this browser. You can view, re-download, or modify them.</p>
       </div>
+      <div class="history-controls glass-panel" style="margin-bottom: 2rem; padding: 1.25rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; border-radius: var(--border-radius); border: 1px solid var(--dark-border); background: var(--dark-panel);">
+        <div style="display: flex; flex: 1; min-width: 260px; gap: 0.75rem;">
+          <div style="position: relative; flex: 1;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.9rem;">🔍</span>
+            <input type="text" id="history-search" placeholder="Search by Category, Speaker, Topic..." oninput="app.filterHistory()" style="width: 100%; padding: 10px 12px 10px 34px; border: 1px solid var(--dark-border); border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background: var(--dark-bg); color: var(--text-primary); outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--bni-crimson)'" onblur="this.style.borderColor='var(--dark-border)'">
+          </div>
+          <select id="history-filter-category" onchange="app.filterHistory()" style="padding: 10px 12px; border: 1px solid var(--dark-border); border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background: var(--dark-bg); color: var(--text-primary); outline: none; cursor: pointer; min-width: 160px; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--bni-crimson)'" onblur="this.style.borderColor='var(--dark-border)'">
+            <option value="all">All Categories</option>
+            <option value="weekly_meeting">Weekly Meeting</option>
+            <option value="visitor_invite">Visitor Invite</option>
+            <option value="feature_presentation">Feature Presentation</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">Sort:</span>
+          <select id="history-sort-order" onchange="app.filterHistory()" style="padding: 10px 12px; border: 1px solid var(--dark-border); border-radius: 8px; font-family: var(--font-body); font-size: 0.9rem; background: var(--dark-bg); color: var(--text-primary); outline: none; cursor: pointer; min-width: 130px; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--bni-crimson)'" onblur="this.style.borderColor='var(--dark-border)'">
+            <option value="desc">Newest First</option>
+            <option value="asc">Oldest First</option>
+          </select>
+        </div>
+      </div>
 
       <div id="history-grid" class="history-grid">
         <!-- History items dynamically loaded here -->
@@ -374,6 +495,76 @@
     </section>
 
     <!-- SCREEN 8: ADMIN SETTINGS -->
+    <!-- SCREEN: MEMBER APPROVALS (Admin only) -->
+
+    <section id="screen-users" class="screen hidden">
+    <div class="admin-container">
+
+        <div class="section-header">
+            <h2>Member Approvals</h2>
+            <p>Review and manage all member registration requests.</p>
+        </div>
+
+        <div id="users-loading" class="hidden" style="text-align:center; padding: 3rem; color: var(--text-secondary);">
+            Loading requests...
+        </div>
+
+        <!-- PENDING SECTION -->
+        <div id="section-pending">
+            <h3 style="color: #D4AF37; margin: 1.5rem 0 0.75rem;">⏳ Pending Approval</h3>
+            <div id="pending-empty" class="empty-state hidden">
+                <p>✅ No pending approval requests at this time.</p>
+            </div>
+            <div id="pending-table-wrapper" class="glass-panel hidden">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th><th>Email</th><th>Role</th><th>Requested On</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pending-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- APPROVED SECTION -->
+        <div id="section-approved">
+            <h3 style="color: #38A169; margin: 2rem 0 0.75rem;">✅ Approved Members</h3>
+            <div id="approved-empty" class="empty-state hidden">
+                <p>No approved members yet.</p>
+            </div>
+            <div id="approved-table-wrapper" class="glass-panel hidden">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th><th>Email</th><th>Role</th><th>Approved On</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approved-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- REJECTED SECTION -->
+        <div id="section-rejected">
+            <h3 style="color: #E53E3E; margin: 2rem 0 0.75rem;">❌ Rejected Requests</h3>
+            <div id="rejected-empty" class="empty-state hidden">
+                <p>No rejected requests.</p>
+            </div>
+            <div id="rejected-table-wrapper" class="glass-panel hidden">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th><th>Email</th><th>Role</th><th>Rejected On</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rejected-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</section>
     <section id="screen-admin" class="screen hidden">
       <div class="admin-container glass-panel">
         <h2>BNI Lakshya Brand & System Settings</h2>
@@ -408,7 +599,7 @@
                 </div>
               </div>
               <div class="form-group col">
-                <label for="admin-secondary-color">Secondary Color (Gold)</label>
+                <label for="admin-secondary-color">Secondary Color (Sterling Grey)</label>
                 <div class="color-picker-wrapper">
                   <input type="color" id="admin-secondary-color" required>
                   <input type="text" id="admin-secondary-color-hex" pattern="^#([A-Fa-f0-9]{6})$" required>
@@ -481,12 +672,12 @@
   </div>
 
   <!-- Javascript Logic Modules -->
+   <script type="module" src="js/firebase-auth.js"></script>
   <script src="js/utils.js"></script>
-  <script src="js/templates.js"></script>
-  <script src="js/renderer.js"></script>
+  <script src="js/templates.js?v=1.0.1"></script>
+  <script src="js/renderer.js?v=1.0.1"></script>
   <script src="js/admin.js"></script>
   <script src="js/api.js"></script>
-  <script type="module" src="js/app.js"></script>
-  <script type="module" src="/js/firebase-auth.js"></script>
+  <script type="module" src="js/app.js?v=1.0.1"></script>
 </body>
 </html>
