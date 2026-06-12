@@ -1,19 +1,19 @@
 // Stock photo library — add your downloaded BNI stock images here
 const STOCK_PHOTOS = {
   visitor_invite: [
-    '/assets/stock/bni-networking-1.jpg',
-    '/assets/stock/bni-networking-2.jpg'
+    '/assets/stock/bni-networking-1.jpeg',
+    '/assets/stock/bni-networking-2.jpeg'
   ],
   weekly_meeting: [
-    '/assets/stock/bni-meeting-1.jpg',
-    '/assets/stock/bni-meeting-2.jpg'
+    '/assets/stock/bni-meeting-1.jpeg',
+    '/assets/stock/bni-meeting-2.jpeg'
   ],
   feature_presentation: [
-    '/assets/stock/bni-speaker-1.jpg',
-    '/assets/stock/bni-speaker-2.jpg'
+    '/assets/stock/bni-speaker-1.jpeg',
+    '/assets/stock/bni-speaker-2.jpeg'
   ],
   default: [
-    '/assets/stock/bni-professional-1.jpg',
+    '/assets/stock/bni-professional-1.jpeg',
   ]
 };
 
