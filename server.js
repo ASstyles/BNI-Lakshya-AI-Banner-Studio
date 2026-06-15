@@ -13,6 +13,7 @@ const admin = require("firebase-admin");
 const app = express();
 
 const db = require("./firebase");
+const { sendApprovalEmail, sendRejectionEmail, sendRegistrationReceivedEmail } = require("./public/js/mailer");
 
 dotenv.config();
 
@@ -25,94 +26,109 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Create data directory if it doesn't exist
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir);
-}
+  const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir);
+    }
 
-async function getSettings() {
-  const doc = await db
-    .collection("settings")
-    .doc("global")
-    .get();
+    async function getSettings() {
+      const doc = await db
+        .collection("settings")
+        .doc("global")
+        .get();
 
-  if (doc.exists) {
-    return doc.data();
+      if (doc.exists) {
+        return doc.data();
+      }
+
+      return {
+        chapterName: "BNI Lakshya",
+        primaryColor: "#CF2030",
+        secondaryColor: "#C8C8C8",
+        footerText: "",
+        defaultVenue: "",
+        defaultTime: "Thursday, 7:15 AM",
+        defaultCta: "",
+        geminiApiKey: "",
+        grokApiKey: "",
+        openaiApiKey: "",
+        errorCount: 0
+    };
   }
 
-  return {
-    chapterName: "BNI Lakshya",
-    primaryColor: "#CF2030",
-    secondaryColor: "#C8C8C8",
-    footerText: "",
-    defaultVenue: "",
-    defaultTime: "Thursday, 7:15 AM",
-    defaultCta: "",
-    geminiApiKey: "",
-    grokApiKey: "",
-    openaiApiKey: "",
-    errorCount: 0
-};
-}
+  async function saveSettings(settings) {
+    await db
+      .collection("settings")
+      .doc("global")
+      .set(settings);
 
-async function saveSettings(settings) {
-  await db
-    .collection("settings")
-    .doc("global")
-    .set(settings);
-
-  return true;
-}
-
-// In-memory rate limiting map (IP -> { count, startTime })
-const rateLimitMap = new Map();
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
-const MAX_REQUESTS_PER_WINDOW = 50;
-
-function rateLimiter(req, res, next) {
-  const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const now = Date.now();
-  
-  if (!rateLimitMap.has(ip)) {
-    rateLimitMap.set(ip, { count: 1, startTime: now });
-    return next();
+    return true;
   }
-  
-  const limitData = rateLimitMap.get(ip);
-  
-  if (now - limitData.startTime > RATE_LIMIT_WINDOW) {
-    // Reset window
-    limitData.count = 1;
-    limitData.startTime = now;
-    return next();
-  }
-  
-  if (limitData.count >= MAX_REQUESTS_PER_WINDOW) {
-    return res.status(429).json({
-      error: 'Too many requests. Please try again after an hour.'
-    });
-  }
-  
-  limitData.count++;
-  next();
-}
 
-// API Health Check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
-});
+  // Look up the role of the user making an admin request (member/admin/superadmin)
+  async function getRequesterRole(req) {
+    const requesterUid = req.query.requesterUid || req.body?.requesterUid || req.headers["x-user-id"];
+    if (!requesterUid) return null;
 
-// Access Code Auth
-app.post('/api/auth/login', (req, res) => {
-  const { code } = req.body;
-  if (!code) {
-    return res.status(400).json({ success: false, error: 'Access code required' });
+    try {
+      const doc = await db.collection("users").doc(requesterUid).get();
+      if (!doc.exists) return null;
+      return doc.data().role || null;
+    } catch (err) {
+      console.error("getRequesterRole error:", err);
+      return null;
+    }
   }
-  if (code.trim().toUpperCase() === ACCESS_CODE.trim().toUpperCase()) {
-    return res.json({ success: true, token: 'lakshya-auth-token-poc' });
+
+  // In-memory rate limiting map (IP -> { count, startTime })
+  const rateLimitMap = new Map();
+  const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
+  const MAX_REQUESTS_PER_WINDOW = 50;
+
+  function rateLimiter(req, res, next) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const now = Date.now();
+    
+    if (!rateLimitMap.has(ip)) {
+      rateLimitMap.set(ip, { count: 1, startTime: now });
+      return next();
+    }
+    
+    const limitData = rateLimitMap.get(ip);
+    
+    if (now - limitData.startTime > RATE_LIMIT_WINDOW) {
+      // Reset window
+      limitData.count = 1;
+      limitData.startTime = now;
+      return next();
+    }
+    
+    if (limitData.count >= MAX_REQUESTS_PER_WINDOW) {
+      return res.status(429).json({
+        error: 'Too many requests. Please try again after an hour.'
+      });
+    }
+    
+    limitData.count++;
+    next();
   }
-  return res.status(401).json({ success: false, error: 'Invalid access code' });
-});
+
+  // API Health Check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+  });
+
+  // Access Code Auth
+  app.post('/api/auth/login', (req, res) => {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, error: 'Access code required' });
+    }
+    if (code.trim().toUpperCase() === ACCESS_CODE.trim().toUpperCase()) {
+      return res.json({ success: true, token: 'lakshya-auth-token-poc' });
+    }
+    return res.status(401).json({ success: false, error: 'Invalid access code' });
+  });
 
   // Settings Management
   app.get('/api/settings', async (req, res) => {
@@ -416,7 +432,8 @@ app.post('/api/auth/login', (req, res) => {
               headline: req.body.headline || "",
               subheadline: req.body.subheadline || "",
               bulletPoints: req.body.bulletPoints || [],
-              cta: req.body.cta || ""
+              cta: req.body.cta || "",
+              visitorPrice: req.body.visitorPrice || ""
           },
 
           formData: req.body.formData || {},
@@ -463,12 +480,73 @@ app.post('/api/auth/login', (req, res) => {
     }
   });
 
+  // app.post("/api/register", async (req, res) => {
+  //     try {
+  //         console.log("Register endpoint hit");
+  //         console.log(req.body);
+
+  //         const { name, email, password } = req.body;
+
+  //         // Step 1: Check if email already exists in pending_users or users collection
+  //         const existingPending = await db.collection("pending_users")
+  //             .where("email", "==", email).get();
+
+  //         if (!existingPending.empty) {
+  //             return res.status(400).json({
+  //                 success: false,
+  //                 message: "A registration request for this email is already pending approval."
+  //             });
+  //         }
+
+  //         const existingUser = await db.collection("users")
+  //             .where("email", "==", email).get();
+
+  //         if (!existingUser.empty) {
+  //             return res.status(400).json({
+  //                 success: false,
+  //                 message: "An account with this email already exists."
+  //             });
+  //         }
+
+  //         // Step 2: Save registration request in pending_users collection
+  //         // Firebase Auth account is NOT created yet — only created after admin approves
+  //         const pendingRef = await db.collection("pending_users").add({
+  //             name,
+  //             email,
+  //             password,           // stored temporarily for account creation on approval
+  //             role: "member",     // always member — admin is set via backend only
+  //             status: "pending",
+  //             createdAt: new Date().toISOString()
+  //         });
+
+  //         res.status(201).json({
+  //             success: true,
+  //             pendingId: pendingRef.id,
+  //             message: "Registration request submitted. Awaiting admin approval."
+  //         });
+
+  //     } catch (error) {
+  //         console.error("Register error:", error);
+  //         res.status(500).json({
+  //             success: false,
+  //             message: error.message
+  //         });
+  //     }
+  // });
+
+
+  // GET /api/all-users — all registration requests with status
+  
   app.post("/api/register", async (req, res) => {
       try {
           console.log("Register endpoint hit");
           console.log(req.body);
 
-          const { name, email, password } = req.body;
+          const { name, email, password, role } = req.body;
+
+          // Only "member" or "admin" registration requests are allowed.
+          // "superadmin" can never be self-registered.
+          const requestedRole = (role === "admin") ? "admin" : "member";
 
           // Step 1: Check if email already exists in pending_users or users collection
           const existingPending = await db.collection("pending_users")
@@ -492,15 +570,20 @@ app.post('/api/auth/login', (req, res) => {
           }
 
           // Step 2: Save registration request in pending_users collection
-          // Firebase Auth account is NOT created yet — only created after admin approves
+          // Firebase Auth account is NOT created yet — only created after admin/superadmin approves
           const pendingRef = await db.collection("pending_users").add({
               name,
               email,
               password,           // stored temporarily for account creation on approval
-              role: "member",     // always member — admin is set via backend only
+              role: requestedRole,
               status: "pending",
               createdAt: new Date().toISOString()
           });
+
+          // Step 3: Notify the user that their request was received
+          sendRegistrationReceivedEmail({ to: email, name, role: requestedRole }).catch(err =>
+              console.error("Registration received email error:", err)
+          );
 
           res.status(201).json({
               success: true,
@@ -517,49 +600,95 @@ app.post('/api/auth/login', (req, res) => {
       }
   });
 
+  // app.get("/api/all-users", async (req, res) => {
+  //     try {
+  //         const snapshot = await db.collection("pending_users").get();
+  //         const users = [];
+  //         snapshot.forEach(doc => {
+  //             const data = doc.data();
+  //             users.push({
+  //                 id: doc.id,
+  //                 name: data.name,
+  //                 email: data.email,
+  //                 role: data.role,
+  //                 status: data.status,
+  //                 createdAt: data.createdAt,
+  //                 rejectedAt: data.rejectedAt || null
+  //             });
+  //         });
 
-  // GET /api/all-users — all registration requests with status
-  app.get("/api/all-users", async (req, res) => {
-      try {
-          const snapshot = await db.collection("pending_users").get();
-          const users = [];
-          snapshot.forEach(doc => {
-              const data = doc.data();
-              users.push({
-                  id: doc.id,
-                  name: data.name,
-                  email: data.email,
-                  role: data.role,
-                  status: data.status,
-                  createdAt: data.createdAt,
-                  rejectedAt: data.rejectedAt || null
-              });
-          });
+  //         // Also fetch approved users from users collection
+  //         const approvedSnap = await db.collection("users").get();
+  //         approvedSnap.forEach(doc => {
+  //             const data = doc.data();
+  //             if (data.role !== "admin") {
+  //                 users.push({
+  //                     id: doc.id,
+  //                     name: data.name,
+  //                     email: data.email,
+  //                     role: data.role,
+  //                     status: "approved",
+  //                     createdAt: data.createdAt,
+  //                     approvedAt: data.approvedAt || null
+  //                 });
+  //             }
+  //         });
 
-          // Also fetch approved users from users collection
-          const approvedSnap = await db.collection("users").get();
-          approvedSnap.forEach(doc => {
-              const data = doc.data();
-              if (data.role !== "admin") {
-                  users.push({
-                      id: doc.id,
-                      name: data.name,
-                      email: data.email,
-                      role: data.role,
-                      status: "approved",
-                      createdAt: data.createdAt,
-                      approvedAt: data.approvedAt || null
-                  });
-              }
-          });
-
-          res.json({ success: true, users });
-      } catch (error) {
-          res.status(500).json({ success: false, message: error.message });
-      }
-  });
+  //         res.json({ success: true, users });
+  //     } catch (error) {
+  //         res.status(500).json({ success: false, message: error.message });
+  //     }
+  // });
 
   // Called by admin panel to show members awaiting approval
+  // GET /api/all-users — all registration requests with status
+// Regular "admin" sees only member requests; "superadmin" sees member + admin requests.
+app.get("/api/all-users", async (req, res) => {
+    try {
+        const requesterRole = await getRequesterRole(req);
+        const isSuperAdmin = requesterRole === "superadmin";
+
+        const snapshot = await db.collection("pending_users").get();
+        const users = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (!isSuperAdmin && data.role === "admin") return; // hide admin requests from regular admins
+            users.push({
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                status: data.status,
+                createdAt: data.createdAt,
+                rejectedAt: data.rejectedAt || null
+            });
+        });
+
+        // Also fetch approved users from users collection
+        const approvedSnap = await db.collection("users").get();
+        approvedSnap.forEach(doc => {
+            const data = doc.data();
+            if (data.role === "superadmin") return; // never list superadmin accounts
+            if (!isSuperAdmin && data.role === "admin") return; // regular admins don't see admin accounts
+            if (!isSuperAdmin && data.role !== "member") return;
+
+            users.push({
+                id: doc.id,
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                status: "approved",
+                createdAt: data.createdAt,
+                approvedAt: data.approvedAt || null
+            });
+        });
+
+        res.json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+  
   app.get("/api/pending-users", async (req, res) => {
       try {
           const snapshot = await db.collection("pending_users")
@@ -589,65 +718,97 @@ app.post('/api/auth/login', (req, res) => {
 
 
   app.post("/api/approve-user/:id", async (req, res) => {
-      try {
-          const pendingId = req.params.id;
+    try {
+        const pendingId = req.params.id;
 
-          // Get the pending user record
-          const pendingDoc = await db.collection("pending_users").doc(pendingId).get();
+        // Get the pending user record
+        const pendingDoc = await db.collection("pending_users").doc(pendingId).get();
 
-          if (!pendingDoc.exists) {
-              return res.status(404).json({ success: false, message: "Pending user not found." });
-          }
-
-          const { name, email, password, role } = pendingDoc.data();
-
-          // Step 1: Create Firebase Auth account now that admin has approved
-          const userRecord = await admin.auth().createUser({
-              email,
-              password,
-              displayName: name
-          });
-
-          // Step 2: Save to users collection (official approved member)
-          await db.collection("users").doc(userRecord.uid).set({
-              name,
-              email,
-              role: role || "member",
-              status: "approved",
-              approvedAt: new Date().toISOString(),
-              createdAt: new Date().toISOString()
-          });
-
-          // Step 3: Remove from pending_users
-          await db.collection("pending_users").doc(pendingId).delete();
-
-          res.json({ success: true, message: `${name} has been approved successfully.` });
-
-        } catch (error) {
-            console.error("Approve user error:", error);
-            res.status(500).json({ success: false, message: error.message });
+        if (!pendingDoc.exists) {
+            return res.status(404).json({ success: false, message: "Pending user not found." });
         }
-    });
 
- 
-  // admin rejects a member
-  app.delete("/api/reject-user/:id", async (req, res) => {
-      try {
-          const pendingDoc = await db.collection("pending_users").doc(req.params.id).get();
-          if (!pendingDoc.exists) {
-              return res.status(404).json({ success: false, message: "Pending user not found." });
-          }
-          // ✅ Status update karo, delete nahi
-          await db.collection("pending_users").doc(req.params.id).update({
-              status: "rejected",
-              rejectedAt: new Date().toISOString()
-          });
-          res.json({ success: true, message: `${pendingDoc.data().name}'s registration has been rejected.` });
+        const { name, email, password, role } = pendingDoc.data();
+        const finalRole = role || "member";
+
+        // Only a superadmin can approve admin registration requests
+        if (finalRole === "admin") {
+            const requesterRole = await getRequesterRole(req);
+            if (requesterRole !== "superadmin") {
+                return res.status(403).json({ success: false, message: "Only a Super Admin can approve admin requests." });
+            }
+        }
+
+        // Step 1: Create Firebase Auth account now that admin has approved
+        const userRecord = await admin.auth().createUser({
+            email,
+            password,
+            displayName: name
+        });
+
+        // Step 2: Save to users collection (official approved member/admin)
+        await db.collection("users").doc(userRecord.uid).set({
+            name,
+            email,
+            role: finalRole,
+            status: "approved",
+            approvedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        });
+
+        // Step 3: Remove from pending_users
+        await db.collection("pending_users").doc(pendingId).delete();
+
+        // Step 4: Notify the user via email
+        sendApprovalEmail({ to: email, name, role: finalRole }).catch(err =>
+            console.error("Approval email error:", err)
+        );
+
+        res.json({ success: true, message: `${name} has been approved successfully.` });
+
       } catch (error) {
-          console.error("Reject user error:", error);
+          console.error("Approve user error:", error);
           res.status(500).json({ success: false, message: error.message });
       }
   });
+  
+
+  // admin/superadmin rejects a member or admin registration
+app.delete("/api/reject-user/:id", async (req, res) => {
+    try {
+        const pendingDoc = await db.collection("pending_users").doc(req.params.id).get();
+        if (!pendingDoc.exists) {
+            return res.status(404).json({ success: false, message: "Pending user not found." });
+        }
+
+        const { name, email, role } = pendingDoc.data();
+        const finalRole = role || "member";
+
+        // Only a superadmin can reject admin registration requests
+        if (finalRole === "admin") {
+            const requesterRole = await getRequesterRole(req);
+            if (requesterRole !== "superadmin") {
+                return res.status(403).json({ success: false, message: "Only a Super Admin can reject admin requests." });
+            }
+        }
+
+        // ✅ Status update karo, delete nahi
+        await db.collection("pending_users").doc(req.params.id).update({
+            status: "rejected",
+            rejectedAt: new Date().toISOString()
+        });
+
+        // Notify the user via email
+        sendRejectionEmail({ to: email, name, role: finalRole }).catch(err =>
+            console.error("Rejection email error:", err)
+        );
+
+        res.json({ success: true, message: `${name}'s registration has been rejected.` });
+    } catch (error) {
+        console.error("Reject user error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
   // update user password directly
   app.post("/api/reset-password", async (req, res) => {
@@ -694,6 +855,7 @@ app.post('/api/auth/login', (req, res) => {
       const docRef = await db.collection("banners").add({
           ...banner,
 
+          visitorPrice: req.body.visitorPrice,
           imageUrl: banner.imageUrl || "",
           createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
@@ -834,6 +996,7 @@ app.post('/api/auth/login', (req, res) => {
           - Who they can connect with / Referral opportunities: ${data.opportunities}
           - Meeting details: Date: ${data.date || 'Thursday'}, Time: ${data.time || settings.defaultTime}, Venue: ${data.venue || settings.defaultVenue}
           - CTA: ${data.cta || settings.defaultCta}
+          - Visitor Pass Price: ₹${data.visitorPrice || '0'}
           
           Follow these strict copywriting rules:
           1. Keep the copy suitable for a visual banner. Do NOT write long paragraphs.
@@ -846,6 +1009,8 @@ app.post('/api/auth/login', (req, res) => {
           8. CTA should be action-oriented and short.
           9. Keep text short to prevent design overflow.
           10. Provide a detailed WhatsApp caption (with appropriate bullet points, bold markers, and calendar emojis) and a professional LinkedIn caption.
+          11. If Visitor Pass Price is provided, preserve it exactly.
+          12. Include visitorPrice in the JSON response.
           
           Respond with a JSON object of this structure:
           {
@@ -853,6 +1018,7 @@ app.post('/api/auth/login', (req, res) => {
             "subheadline": "String under 20 words",
             "bulletPoints": ["Array of 3 to 5 bullet points (each under 5 words)"],
             "cta": "Short CTA string",
+            "visitorPrice": "1100",
             "whatsappCaption": "Formatted WhatsApp text block with line breaks",
             "linkedinCaption": "Formatted LinkedIn post caption",
             "imageDirection": "Brief visualization guidelines (e.g., Premium dark mesh backdrop, crimson accents, spotlight circles)"
@@ -869,6 +1035,7 @@ app.post('/api/auth/login', (req, res) => {
           - Visitor Focus (optional): ${data.visitorCategory || 'Open Categories'}
           - Key Reason to Attend: ${data.reason || 'Grow business via word-of-mouth referrals'}
           - CTA: ${data.cta || settings.defaultCta}
+          - Visitor Pass Price: ₹${data.visitorPrice || '0'}
           
           Follow these rules:
           1. Keep it professional, energetic, and premium.
@@ -883,6 +1050,7 @@ app.post('/api/auth/login', (req, res) => {
             "subheadline": "String under 20 words",
             "bulletPoints": ["Array of 3 bullet points (each under 5 words)"],
             "cta": "Short CTA string",
+            "visitorPrice": "1100",
             "whatsappCaption": "Formatted WhatsApp text block with line breaks",
             "linkedinCaption": "Formatted LinkedIn post caption",
             "imageDirection": "Brief visualization guidelines"
@@ -899,6 +1067,7 @@ app.post('/api/auth/login', (req, res) => {
           - Presentation Topic: ${data.topic}
           - Meeting details: Date: ${data.date || 'Thursday'}, Time: ${data.time || settings.defaultTime}, Venue: ${data.venue || settings.defaultVenue}
           - CTA: ${data.cta || settings.defaultCta}
+          - Visitor Pass Price: ₹${data.visitorPrice || '0'}
           
           Follow these rules:
           1. Focus on the value and knowledge the audience will gain from the presentation.
@@ -913,6 +1082,7 @@ app.post('/api/auth/login', (req, res) => {
             "subheadline": "String under 20 words",
             "bulletPoints": ["Array of 3 bullet points (each under 5 words)"],
             "cta": "Short CTA string",
+            "visitorPrice": "1100",
             "whatsappCaption": "Formatted WhatsApp text block with line breaks",
             "linkedinCaption": "Formatted LinkedIn post caption",
             "imageDirection": "Brief visualization guidelines"
@@ -1011,6 +1181,8 @@ app.post('/api/auth/login', (req, res) => {
                 meetingDate: data.date || "",
                 meetingTime: data.time || "",
                 venue: data.venue || "",
+                visitorPrice: data.visitorPrice || "",
+
 
                 speakerName: data.speakerName || "",
                 companyName: data.companyName || "",
