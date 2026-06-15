@@ -19,12 +19,20 @@
         <img src="/assets/bni-logo-white.png" alt="BNI" style="height:28px; display:block;" onerror="this.style.display='none'">
         <span class="brand-title">Lakshya Banner Studio</span>
       </div>
-      <nav class="nav-links">
+      <!-- <nav class="nav-links">
         <span id="nav-username"></span>
-        <button id="nav-btn-create" class="nav-link active" onclick="app.showScreen('screen-select-type')">Create Banner</button>
+        <button id="nav-btn-create" class="nav-link active hidden" onclick="app.showScreen('screen-select-type')">Create Banner</button>
         <button id="nav-btn-history" class="nav-link" onclick="app.showScreen('screen-history')">History</button>
         <button id="nav-btn-users" class="nav-link hidden" onclick="app.showScreen('screen-users')">Approvals</button>
-        <button id="nav-btn-admin" class="nav-link" onclick="app.showScreen('screen-admin')">Admin Settings</button>
+        <button id="nav-btn-admin" class="nav-link" onclick="app.showAdminSettings()">Admin Settings</button>
+        <button id="nav-btn-logout" class="nav-btn-secondary" onclick="app.logout()">Logout</button>
+      </nav> -->
+      <nav class="nav-links">
+        <span id="nav-username"></span>
+        <button id="nav-btn-create" class="nav-link active hidden" onclick="app.showScreen('screen-select-type')">Create Banner</button>
+        <button id="nav-btn-history" class="nav-link hidden" onclick="app.showScreen('screen-history')">History</button>
+        <button id="nav-btn-users" class="nav-link hidden" onclick="app.showScreen('screen-users')">Approvals</button>
+        <button id="nav-btn-admin" class="nav-link hidden" onclick="app.showAdminSettings()">Admin Settings</button>
         <button id="nav-btn-logout" class="nav-btn-secondary" onclick="app.logout()">Logout</button>
       </nav>
     </div>
@@ -186,6 +194,17 @@
                         </select>
                     </div> -->
 
+                    <div class="form-group">
+                        <label>REGISTER AS</label>
+                        <select id="register-role">
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                            Admin requests require Super Admin approval.
+                        </p>
+                    </div>
+
                   <button type="submit" class="btn-primary"> Register </button>
               </form>
 
@@ -267,7 +286,7 @@
 
           <!-- Aspect Ratio Selection -->
           <div class="aspect-ratio-selector">
-            <label class="form-label">Select Aspect Ratio</label>
+            <label class="form-label">Choose Banner Size</label>
             <div class="ratio-options">
               <label class="ratio-card">
                 <input type="radio" name="aspectRatio" value="square" checked>
@@ -329,8 +348,10 @@
 
         <div class="copy-fields-editor">
           <div class="form-group">
-            <label for="edit-headline">Headline</label>
-            <input type="text" id="edit-headline" required>
+            <!-- <label for="edit-headline">Headline</label>
+            <input type="text" id="edit-headline" required> -->
+            <label for="edit-headline">Headline <span style="font-size:0.75rem; color: var(--text-secondary); font-weight: normal;">(AI generated — not editable)</span></label>
+            <input type="text" id="edit-headline" required readonly disabled style="cursor: not-allowed; opacity: 0.75;">
           </div>
           
           <div class="form-group">
@@ -500,11 +521,16 @@
     <section id="screen-users" class="screen hidden">
     <div class="admin-container">
 
-        <div class="section-header">
+        <!-- <div class="section-header">
             <h2>Member Approvals</h2>
             <p>Review and manage all member registration requests.</p>
-        </div>
+        </div> -->
 
+
+        <div class="section-header">
+            <h2 id="approvals-title">Approvals</h2>
+            <p id="approvals-subtitle">Review and manage member registration requests.</p>
+        </div>
         <div id="users-loading" class="hidden" style="text-align:center; padding: 3rem; color: var(--text-secondary);">
             Loading requests...
         </div>
