@@ -269,12 +269,29 @@ const BANNER_TEMPLATES = {
             </div>
             <div class="banner-footer">
               <div class="meta-details">
-                <div class="meta-line">🗓️ Date: <strong contenteditable="true" 
-                     data-field="date">${copy.date}</strong></div>
-                <div class="meta-line">⏰ Time: <strong contenteditable="true" 
-                     data-field="time">${copy.time}</strong></div>
-                <div class="meta-line">📍 Venue: <strong contenteditable="true" 
-                     data-field="venue">${copy.venue}</strong></div>
+                <div class="meta-line">
+                    🗓️ Date:
+                    <strong contenteditable="true" data-field="date">${copy.date}</strong>
+                </div>
+
+                <div class="meta-line">
+                    ⏰ Time:
+                    <strong contenteditable="true" data-field="time">${copy.time}</strong>
+                </div>
+
+                <div class="meta-line">
+                    📍 Venue:
+                    <strong contenteditable="true" data-field="venue">${copy.venue}</strong>
+                </div>
+
+                ${copy.visitorPrice ? `
+                <div class="meta-line">
+                    🎟️ Visitor Pass:
+                    <strong contenteditable="true" data-field="visitorPrice">
+                        ₹${copy.visitorPrice}
+                    </strong>
+                </div>
+                ` : ''}
               </div>
               ${getCTAHtml(copy, settings)}
             </div>
@@ -322,14 +339,29 @@ const BANNER_TEMPLATES = {
             ${bulletsHtml}
           </div>
           <div class="banner-footer">
-            <div class="meta-details">
-              <div class="meta-line">🗓️ Date: <strong contenteditable="true" 
-                   data-field="date">${copy.date}</strong></div>
-              <div class="meta-line">⏰ Time: <strong contenteditable="true" 
-                   data-field="time">${copy.time}</strong></div>
-              <div class="meta-line">📍 Venue: <strong contenteditable="true" 
-                   data-field="venue">${copy.venue}</strong></div>
-            </div>
+            <div class="meta-line">
+                    🗓️ Date:
+                    <strong contenteditable="true" data-field="date">${copy.date}</strong>
+                </div>
+
+                <div class="meta-line">
+                    ⏰ Time:
+                    <strong contenteditable="true" data-field="time">${copy.time}</strong>
+                </div>
+
+                <div class="meta-line">
+                    📍 Venue:
+                    <strong contenteditable="true" data-field="venue">${copy.venue}</strong>
+                </div>
+
+                ${copy.visitorPrice ? `
+                <div class="meta-line">
+                    🎟️ Visitor Pass:
+                    <strong contenteditable="true" data-field="visitorPrice">
+                        ₹${copy.visitorPrice}
+                    </strong>
+                </div>
+                ` : ''}
             ${getCTAHtml(copy, settings)}
           </div>
           <div class="banner-disclaimer" contenteditable="true" 
@@ -368,14 +400,29 @@ const BANNER_TEMPLATES = {
               </ul>
             </div>
             <div class="banner-footer">
-              <div class="meta-details">
-                <div class="meta-line">🗓️ Date: <strong contenteditable="true" 
-                     data-field="date">${copy.date}</strong></div>
-                <div class="meta-line">⏰ Time: <strong contenteditable="true" 
-                     data-field="time">${copy.time}</strong></div>
-                <div class="meta-line">📍 Venue: <strong contenteditable="true" 
-                     data-field="venue">${copy.venue}</strong></div>
-              </div>
+              <div class="meta-line">
+                    🗓️ Date:
+                    <strong contenteditable="true" data-field="date">${copy.date}</strong>
+                </div>
+
+                <div class="meta-line">
+                    ⏰ Time:
+                    <strong contenteditable="true" data-field="time">${copy.time}</strong>
+                </div>
+
+                <div class="meta-line">
+                    📍 Venue:
+                    <strong contenteditable="true" data-field="venue">${copy.venue}</strong>
+                </div>
+
+                ${copy.visitorPrice ? `
+                <div class="meta-line">
+                    🎟️ Visitor Pass:
+                    <strong contenteditable="true" data-field="visitorPrice">
+                        ₹${copy.visitorPrice}
+                    </strong>
+                </div>
+                ` : ''}
               ${getCTAHtml(copy, settings)}
             </div>
             <div class="banner-disclaimer" contenteditable="true" 

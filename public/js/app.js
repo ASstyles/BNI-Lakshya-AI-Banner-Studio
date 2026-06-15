@@ -52,7 +52,13 @@
 
                     this.setupRoleUI();
 
-                    if(userData.role === "admin"){
+                    // if(userData.role === "admin"){
+                    //     this.showScreen("screen-history");
+                    // }else{
+                    //     this.showScreen("screen-select-type");
+                    // }
+
+                    if(userData.role === "admin" || userData.role === "superadmin"){
                         this.showScreen("screen-history");
                     }else{
                         this.showScreen("screen-select-type");
@@ -200,7 +206,12 @@
             document.getElementById("main-nav").classList.remove("hidden");
             utils.showToast(`Welcome ${userData.name}`);
 
-            if (userData.role === "admin") {
+            // if (userData.role === "admin") {
+            //     this.showScreen("screen-history");
+            // } else {
+            //     this.showScreen("screen-select-type");
+            // }
+            if (userData.role === "admin" || userData.role === "superadmin") {
                 this.showScreen("screen-history");
             } else {
                 this.showScreen("screen-select-type");
@@ -211,100 +222,78 @@
             utils.showToast("Invalid Email or Password");
         }
     },
-    
+
     handleRegister: async function(event) {
 
-        event.preventDefault();
+    event.preventDefault();
 
-        const name = document.getElementById("register-name").value;
-        const email = document.getElementById("register-email").value;
-        const password = document.getElementById("register-password").value;
-        // const role = document.getElementById("register-role").value;
-        const role = "member"; // Force all new registrations to be "member" role
+    const name = document.getElementById("register-name").value;
+    const email = document.getElementById("register-email").value;
+    const password = document.getElementById("register-password").value;
+    const roleSelect = document.getElementById("register-role");
+    const role = roleSelect ? roleSelect.value : "member"; // "member" or "admin" — superadmin can't self-register
 
-    try {
-        const response = await fetch("/api/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ name, email, password, role })
-          });
+try {
+    const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, email, password, role })
+      });
 
-        const result = await response.json();
+    const result = await response.json();
 
-        if (result.success) {
-            utils.showToast("Registration submitted! Awaiting admin approval.");
-            document.getElementById("register-form").reset();
-            setTimeout(() => {
-                app.showScreen("screen-login");
-            }, 1500);
-        } else {
-            // Show exact server message — "already pending" or "already exists"
-            utils.showToast(result.message || "Registration Failed");
+    if (result.success) {
+        utils.showToast("Registration submitted! Awaiting admin approval.");
+        document.getElementById("register-form").reset();
+        setTimeout(() => {
+            app.showScreen("screen-login");
+        }, 1500);
+    } else {
+        utils.showToast(result.message || "Registration Failed");
 
-            // If already pending — redirect to login directly
-            if (result.message && result.message.includes("already pending")) {
-                utils.showToast("Your request is already pending. Please wait for admin approval.");
-            }
-            // If already registered — redirect to login
-            if (result.message && result.message.includes("already exists")) {
-                utils.showToast("Account already exists. Please login.");
-                setTimeout(() => app.showScreen("screen-login"), 1500);
-            }
+        if (result.message && result.message.includes("already pending")) {
+            utils.showToast("Your request is already pending. Please wait for admin approval.");
         }
-
-      } catch (error) {
-          console.error(error);
-          utils.showToast(error.message);
+        if (result.message && result.message.includes("already exists")) {
+            utils.showToast("Account already exists. Please login.");
+            setTimeout(() => app.showScreen("screen-login"), 1500);
         }
-    },
+    }
 
-
-    // FORGOT PASSWORD — Show the forgot password screen
-    // showForgotPassword: function() {
-    //     // Hide login screen, show forgot password screen
-    //     app.showScreen("screen-forgot-password");
-
-    //     // Clear any previous state
-    //     document.getElementById("forgot-email").value = "";
-    //     document.getElementById("forgot-error").classList.add("hidden");
-    //     document.getElementById("forgot-error").textContent = "";
-    //     document.getElementById("forgot-success").classList.add("hidden");
-
-    //     // Re-enable the button in case it was disabled from a previous attempt
-    //     const btn = document.getElementById("forgot-submit-btn");
-    //     if (btn) {
-    //         btn.disabled = false;
-    //         btn.textContent = "Send Reset Link";
-    //     }
-    // },
+  } catch (error) {
+      console.error(error);
+      utils.showToast(error.message);
+    }
+},
+  
 
     showForgotPassword: function() {
-    app.showScreen("screen-forgot-password");
+        app.showScreen("screen-forgot-password");
 
-    document.getElementById("forgot-email").value = "";
-    document.getElementById("forgot-new-password").value = "";
-    document.getElementById("forgot-confirm-password").value = "";
+        document.getElementById("forgot-email").value = "";
+        document.getElementById("forgot-new-password").value = "";
+        document.getElementById("forgot-confirm-password").value = "";
 
-    // Lock password fields again
-    const np = document.getElementById("forgot-new-password");
-    const cp = document.getElementById("forgot-confirm-password");
-    np.disabled = true; np.style.opacity = "0.4"; np.style.cursor = "not-allowed";
-    cp.disabled = true; cp.style.opacity = "0.4"; cp.style.cursor = "not-allowed";
+        // Lock password fields again
+        const np = document.getElementById("forgot-new-password");
+        const cp = document.getElementById("forgot-confirm-password");
+        np.disabled = true; np.style.opacity = "0.4"; np.style.cursor = "not-allowed";
+        cp.disabled = true; cp.style.opacity = "0.4"; cp.style.cursor = "not-allowed";
 
-    document.getElementById("forgot-error").classList.add("hidden");
-    document.getElementById("forgot-error").textContent = "";
-    document.getElementById("forgot-success").classList.add("hidden");
-    document.getElementById("forgot-screen-title").textContent = "Reset Password";
-    document.getElementById("forgot-screen-subtitle").textContent =
-        "Enter your registered email. Password fields will unlock after verification.";
+        document.getElementById("forgot-error").classList.add("hidden");
+        document.getElementById("forgot-error").textContent = "";
+        document.getElementById("forgot-success").classList.add("hidden");
+        document.getElementById("forgot-screen-title").textContent = "Reset Password";
+        document.getElementById("forgot-screen-subtitle").textContent =
+            "Enter your registered email. Password fields will unlock after verification.";
 
-    const btn = document.getElementById("forgot-submit-btn");
-    btn.textContent = "Verify Email";
-    btn.disabled = false;
-    btn.onclick = () => app.handleForgotPassword();
-},
+        const btn = document.getElementById("forgot-submit-btn");
+        btn.textContent = "Verify Email";
+        btn.disabled = false;
+        btn.onclick = () => app.handleForgotPassword();
+    },
 
     // FORGOT PASSWORD — Go back to login screen
     hideForgotPassword: function() {
@@ -501,138 +490,293 @@
 
 
     // ADMIN — Load all pending member registration requests
-    loadPendingUsers: async function() {
-        const loadingEl = document.getElementById("users-loading");
-        loadingEl.classList.remove("hidden");
+    // loadPendingUsers: async function() {
+    //     const loadingEl = document.getElementById("users-loading");
+    //     loadingEl.classList.remove("hidden");
 
-        try {
-            const response = await fetch("/api/all-users");
-            const result   = await response.json();
-            loadingEl.classList.add("hidden");
+    //     try {
+    //         const response = await fetch("/api/all-users");
+    //         const result   = await response.json();
+    //         loadingEl.classList.add("hidden");
 
-            const pending  = result.users.filter(u => u.status === "pending");
-            const approved = result.users.filter(u => u.status === "approved");
-            const rejected = result.users.filter(u => u.status === "rejected");
+    //         const pending  = result.users.filter(u => u.status === "pending");
+    //         const approved = result.users.filter(u => u.status === "approved");
+    //         const rejected = result.users.filter(u => u.status === "rejected");
 
-            const fmt = (dateStr) => dateStr
-                ? new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-                : "—";
+    //         const fmt = (dateStr) => dateStr
+    //             ? new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    //             : "—";
 
-            // --- PENDING ---
-            const pendingTbody = document.getElementById("pending-table-body");
-            pendingTbody.innerHTML = "";
-            if (pending.length === 0) {
-                document.getElementById("pending-empty").classList.remove("hidden");
-                document.getElementById("pending-table-wrapper").classList.add("hidden");
-            } else {
-                document.getElementById("pending-empty").classList.add("hidden");
-                document.getElementById("pending-table-wrapper").classList.remove("hidden");
-                pending.forEach(user => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${user.name}</td>
-                        <td>${user.email}</td>
-                        <td><span class="role-badge">${user.role}</span></td>
-                        <td>${fmt(user.createdAt)}</td>
-                        <td class="action-btns">
-                            <button class="btn-approve" onclick="app.approveUser('${user.id}','${user.name}',this)">✓ Approve</button>
-                            <button class="btn-reject"  onclick="app.rejectUser('${user.id}','${user.name}',this)">✕ Reject</button>
-                        </td>
-                    `;
-                    pendingTbody.appendChild(tr);
-                });
-            }
+    //         // --- PENDING ---
+    //         const pendingTbody = document.getElementById("pending-table-body");
+    //         pendingTbody.innerHTML = "";
+    //         if (pending.length === 0) {
+    //             document.getElementById("pending-empty").classList.remove("hidden");
+    //             document.getElementById("pending-table-wrapper").classList.add("hidden");
+    //         } else {
+    //             document.getElementById("pending-empty").classList.add("hidden");
+    //             document.getElementById("pending-table-wrapper").classList.remove("hidden");
+    //             pending.forEach(user => {
+    //                 const tr = document.createElement("tr");
+    //                 tr.innerHTML = `
+    //                     <td>${user.name}</td>
+    //                     <td>${user.email}</td>
+    //                     <td><span class="role-badge">${user.role}</span></td>
+    //                     <td>${fmt(user.createdAt)}</td>
+    //                     <td class="action-btns">
+    //                         <button class="btn-approve" onclick="app.approveUser('${user.id}','${user.name}',this)">✓ Approve</button>
+    //                         <button class="btn-reject"  onclick="app.rejectUser('${user.id}','${user.name}',this)">✕ Reject</button>
+    //                     </td>
+    //                 `;
+    //                 pendingTbody.appendChild(tr);
+    //             });
+    //         }
 
-            // --- APPROVED ---
-            const approvedTbody = document.getElementById("approved-table-body");
-            approvedTbody.innerHTML = "";
-            if (approved.length === 0) {
-                document.getElementById("approved-empty").classList.remove("hidden");
-                document.getElementById("approved-table-wrapper").classList.add("hidden");
-            } else {
-                document.getElementById("approved-empty").classList.add("hidden");
-                document.getElementById("approved-table-wrapper").classList.remove("hidden");
-                approved.forEach(user => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${user.name}</td>
-                        <td>${user.email}</td>
-                        <td><span class="role-badge">${user.role}</span></td>
-                        <td>${fmt(user.approvedAt || user.createdAt)}</td>
-                    `;
-                    approvedTbody.appendChild(tr);
-                });
-            }
+    //         // --- APPROVED ---
+    //         const approvedTbody = document.getElementById("approved-table-body");
+    //         approvedTbody.innerHTML = "";
+    //         if (approved.length === 0) {
+    //             document.getElementById("approved-empty").classList.remove("hidden");
+    //             document.getElementById("approved-table-wrapper").classList.add("hidden");
+    //         } else {
+    //             document.getElementById("approved-empty").classList.add("hidden");
+    //             document.getElementById("approved-table-wrapper").classList.remove("hidden");
+    //             approved.forEach(user => {
+    //                 const tr = document.createElement("tr");
+    //                 tr.innerHTML = `
+    //                     <td>${user.name}</td>
+    //                     <td>${user.email}</td>
+    //                     <td><span class="role-badge">${user.role}</span></td>
+    //                     <td>${fmt(user.approvedAt || user.createdAt)}</td>
+    //                 `;
+    //                 approvedTbody.appendChild(tr);
+    //             });
+    //         }
 
-            // --- REJECTED ---
-            const rejectedTbody = document.getElementById("rejected-table-body");
-            rejectedTbody.innerHTML = "";
-            if (rejected.length === 0) {
-                document.getElementById("rejected-empty").classList.remove("hidden");
-                document.getElementById("rejected-table-wrapper").classList.add("hidden");
-            } else {
-                document.getElementById("rejected-empty").classList.add("hidden");
-                document.getElementById("rejected-table-wrapper").classList.remove("hidden");
-                rejected.forEach(user => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${user.name}</td>
-                        <td>${user.email}</td>
-                        <td><span class="role-badge">${user.role}</span></td>
-                        <td>${fmt(user.rejectedAt || user.createdAt)}</td>
-                    `;
-                    rejectedTbody.appendChild(tr);
-                });
-            }
+    //         // --- REJECTED ---
+    //         const rejectedTbody = document.getElementById("rejected-table-body");
+    //         rejectedTbody.innerHTML = "";
+    //         if (rejected.length === 0) {
+    //             document.getElementById("rejected-empty").classList.remove("hidden");
+    //             document.getElementById("rejected-table-wrapper").classList.add("hidden");
+    //         } else {
+    //             document.getElementById("rejected-empty").classList.add("hidden");
+    //             document.getElementById("rejected-table-wrapper").classList.remove("hidden");
+    //             rejected.forEach(user => {
+    //                 const tr = document.createElement("tr");
+    //                 tr.innerHTML = `
+    //                     <td>${user.name}</td>
+    //                     <td>${user.email}</td>
+    //                     <td><span class="role-badge">${user.role}</span></td>
+    //                     <td>${fmt(user.rejectedAt || user.createdAt)}</td>
+    //                 `;
+    //                 rejectedTbody.appendChild(tr);
+    //             });
+    //         }
 
-        } catch (error) {
-            console.error("Load users error:", error);
-            loadingEl.classList.add("hidden");
-            utils.showToast("Failed to load users.");
+    //     } catch (error) {
+    //         console.error("Load users error:", error);
+    //         loadingEl.classList.add("hidden");
+    //         utils.showToast("Failed to load users.");
+    //     }
+    // },
+
+// ADMIN — Load all pending member registration requests
+loadPendingUsers: async function() {
+    const loadingEl = document.getElementById("users-loading");
+    loadingEl.classList.remove("hidden");
+
+    try {
+        const requesterUid = localStorage.getItem("bni_auth_token") || "";
+        const response = await fetch(`/api/all-users?requesterUid=${encodeURIComponent(requesterUid)}`);
+        const result   = await response.json();
+        loadingEl.classList.add("hidden");
+
+        // Set header text based on role
+        const userRole = localStorage.getItem("userRole");
+        const titleEl = document.getElementById("approvals-title");
+        const subtitleEl = document.getElementById("approvals-subtitle");
+        if (userRole === "superadmin") {
+            if (titleEl) titleEl.textContent = "Approvals (Members & Admins)";
+            if (subtitleEl) subtitleEl.textContent = "Review and manage member and admin registration requests.";
+        } else {
+            if (titleEl) titleEl.textContent = "Member Approvals";
+            if (subtitleEl) subtitleEl.textContent = "Review and manage member registration requests.";
         }
-    },
 
+        const pending  = result.users.filter(u => u.status === "pending");
+        const approved = result.users.filter(u => u.status === "approved");
+        const rejected = result.users.filter(u => u.status === "rejected");
+
+        const fmt = (dateStr) => dateStr
+            ? new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+            : "—";
+
+        // --- PENDING ---
+        const pendingTbody = document.getElementById("pending-table-body");
+        pendingTbody.innerHTML = "";
+        if (pending.length === 0) {
+            document.getElementById("pending-empty").classList.remove("hidden");
+            document.getElementById("pending-table-wrapper").classList.add("hidden");
+        } else {
+            document.getElementById("pending-empty").classList.add("hidden");
+            document.getElementById("pending-table-wrapper").classList.remove("hidden");
+            pending.forEach(user => {
+                const tr = document.createElement("tr");
+                const roleBadge = user.role === "admin"
+                    ? `<span class="role-badge role-badge-admin">⚡ Admin Request</span>`
+                    : `<span class="role-badge">Member</span>`;
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td>${roleBadge}</td>
+                    <td>${fmt(user.createdAt)}</td>
+                    <td class="action-btns">
+                        <button class="btn-approve" onclick="app.approveUser('${user.id}','${user.name}',this)">✓ Approve</button>
+                        <button class="btn-reject"  onclick="app.rejectUser('${user.id}','${user.name}',this)">✕ Reject</button>
+                    </td>
+                `;
+                pendingTbody.appendChild(tr);
+            });
+        }
+
+        // --- APPROVED ---
+        const approvedTbody = document.getElementById("approved-table-body");
+        approvedTbody.innerHTML = "";
+        if (approved.length === 0) {
+            document.getElementById("approved-empty").classList.remove("hidden");
+            document.getElementById("approved-table-wrapper").classList.add("hidden");
+        } else {
+            document.getElementById("approved-empty").classList.add("hidden");
+            document.getElementById("approved-table-wrapper").classList.remove("hidden");
+            approved.forEach(user => {
+                const tr = document.createElement("tr");
+                const roleBadge = user.role === "admin"
+                    ? `<span class="role-badge role-badge-admin">⚡ Admin</span>`
+                    : `<span class="role-badge">Member</span>`;
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td>${roleBadge}</td>
+                    <td>${fmt(user.approvedAt || user.createdAt)}</td>
+                `;
+                approvedTbody.appendChild(tr);
+            });
+        }
+
+        // --- REJECTED ---
+        const rejectedTbody = document.getElementById("rejected-table-body");
+        rejectedTbody.innerHTML = "";
+        if (rejected.length === 0) {
+            document.getElementById("rejected-empty").classList.remove("hidden");
+            document.getElementById("rejected-table-wrapper").classList.add("hidden");
+        } else {
+            document.getElementById("rejected-empty").classList.add("hidden");
+            document.getElementById("rejected-table-wrapper").classList.remove("hidden");
+            rejected.forEach(user => {
+                const tr = document.createElement("tr");
+                const roleBadge = user.role === "admin"
+                    ? `<span class="role-badge role-badge-admin">⚡ Admin Request</span>`
+                    : `<span class="role-badge">Member</span>`;
+                tr.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td>${roleBadge}</td>
+                    <td>${fmt(user.rejectedAt || user.createdAt)}</td>
+                `;
+                rejectedTbody.appendChild(tr);
+            });
+        }
+
+    } catch (error) {
+        console.error("Load users error:", error);
+        loadingEl.classList.add("hidden");
+        utils.showToast("Failed to load users.");
+    }
+},
 
     // ADMIN — Approve a pending member    
-    approveUser: async function(pendingId, name, btnEl) {
-        if (!confirm(`Approve ${name}?`)) return;
-        btnEl.disabled = true;
-        btnEl.textContent = "Approving...";
-        try {
-            const res    = await fetch(`/api/approve-user/${pendingId}`, { method: "POST" });
-            const result = await res.json();
-            if (result.success) {
-                utils.showToast(`✅ ${name} approved.`);
-                this.loadPendingUsers(); // ✅ full reload — moves to Approved section
-            } else {
-                utils.showToast(result.message || "Approval failed.");
-                btnEl.disabled = false; btnEl.textContent = "✓ Approve";
-            }
-        } catch (e) {
-            utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✓ Approve";
+    // approveUser: async function(pendingId, name, btnEl) {
+    //     if (!confirm(`Approve ${name}?`)) return;
+    //     btnEl.disabled = true;
+    //     btnEl.textContent = "Approving...";
+    //     try {
+    //         const res    = await fetch(`/api/approve-user/${pendingId}`, { method: "POST" });
+    //         const result = await res.json();
+    //         if (result.success) {
+    //             utils.showToast(`✅ ${name} approved.`);
+    //             this.loadPendingUsers(); // ✅ full reload — moves to Approved section
+    //         } else {
+    //             utils.showToast(result.message || "Approval failed.");
+    //             btnEl.disabled = false; btnEl.textContent = "✓ Approve";
+    //         }
+    //     } catch (e) {
+    //         utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✓ Approve";
+    //     }
+    // },
+
+    // ADMIN — Approve a pending member    
+approveUser: async function(pendingId, name, btnEl) {
+    if (!confirm(`Approve ${name}?`)) return;
+    btnEl.disabled = true;
+    btnEl.textContent = "Approving...";
+    try {
+        const requesterUid = localStorage.getItem("bni_auth_token") || "";
+        const res    = await fetch(`/api/approve-user/${pendingId}?requesterUid=${encodeURIComponent(requesterUid)}`, { method: "POST" });
+        const result = await res.json();
+        if (result.success) {
+            utils.showToast(`✅ ${name} approved.`);
+            this.loadPendingUsers();
+        } else {
+            utils.showToast(result.message || "Approval failed.");
+            btnEl.disabled = false; btnEl.textContent = "✓ Approve";
         }
-    },
+    } catch (e) {
+        utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✓ Approve";
+    }
+},
 
    
     // ADMIN — Reject a pending member
-    rejectUser: async function(pendingId, name, btnEl) {
-        if (!confirm(`Reject ${name}'s registration?`)) return;
-        btnEl.disabled = true;
-        btnEl.textContent = "Rejecting...";
-        try {
-            const res    = await fetch(`/api/reject-user/${pendingId}`, { method: "DELETE" });
-            const result = await res.json();
-            if (result.success) {
-                utils.showToast(`❌ ${name} rejected.`);
-                this.loadPendingUsers(); // ✅ full reload — moves to Rejected section
-            } else {
-                utils.showToast(result.message || "Rejection failed.");
-                btnEl.disabled = false; btnEl.textContent = "✕ Reject";
-            }
-        } catch (e) {
-            utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✕ Reject";
+    // rejectUser: async function(pendingId, name, btnEl) {
+    //     if (!confirm(`Reject ${name}'s registration?`)) return;
+    //     btnEl.disabled = true;
+    //     btnEl.textContent = "Rejecting...";
+    //     try {
+    //         const res    = await fetch(`/api/reject-user/${pendingId}`, { method: "DELETE" });
+    //         const result = await res.json();
+    //         if (result.success) {
+    //             utils.showToast(`❌ ${name} rejected.`);
+    //             this.loadPendingUsers(); // ✅ full reload — moves to Rejected section
+    //         } else {
+    //             utils.showToast(result.message || "Rejection failed.");
+    //             btnEl.disabled = false; btnEl.textContent = "✕ Reject";
+    //         }
+    //     } catch (e) {
+    //         utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✕ Reject";
+    //     }
+    // },
+
+    // ADMIN — Reject a pending member
+rejectUser: async function(pendingId, name, btnEl) {
+    if (!confirm(`Reject ${name}'s registration?`)) return;
+    btnEl.disabled = true;
+    btnEl.textContent = "Rejecting...";
+    try {
+        const requesterUid = localStorage.getItem("bni_auth_token") || "";
+        const res    = await fetch(`/api/reject-user/${pendingId}?requesterUid=${encodeURIComponent(requesterUid)}`, { method: "DELETE" });
+        const result = await res.json();
+        if (result.success) {
+            utils.showToast(`❌ ${name} rejected.`);
+            this.loadPendingUsers();
+        } else {
+            utils.showToast(result.message || "Rejection failed.");
+            btnEl.disabled = false; btnEl.textContent = "✕ Reject";
         }
-    },
+    } catch (e) {
+        utils.showToast("Network error."); btnEl.disabled = false; btnEl.textContent = "✕ Reject";
+    }
+},
     
 
     setupRoleUI: function() {
@@ -652,26 +796,42 @@
             usersBtn
         });
 
-        if(role === "admin") {
-
+        if (role === "superadmin") {
+            // Superadmin: full access to everything including Admin Settings
             createBtn?.classList.add("hidden");
-
             adminBtn?.classList.remove("hidden");
-
+            if (adminBtn) { adminBtn.style.opacity = "1"; adminBtn.title = ""; }
             usersBtn?.classList.remove("hidden");
-
             historyBtn?.classList.remove("hidden");
-        } 
-        else {
-              // Member Menu
-              createBtn?.classList.remove("hidden");
+        } else if (role === "admin") {
+            // Subadmin: can see Admin Settings button but clicking shows permission modal
+            createBtn?.classList.add("hidden");
+            adminBtn?.classList.remove("hidden");
+            if (adminBtn) { adminBtn.style.opacity = "0.6"; adminBtn.title = "Contact your Super Admin for access"; }
+            usersBtn?.classList.remove("hidden");
+            historyBtn?.classList.remove("hidden");
+        } else {
+            createBtn?.classList.remove("hidden");
+            historyBtn?.classList.remove("hidden");
+            adminBtn?.classList.add("hidden");
+            usersBtn?.classList.add("hidden");
+        }
+    },
 
-              historyBtn?.classList.remove("hidden");
+    // Admin Settings — only superadmin can enter
+    showAdminSettings: function() {
+        const role = localStorage.getItem("userRole");
+        if (role === "superadmin") {
+            this.showScreen("screen-admin");
+        } else {
+            const modal = document.getElementById("modal-permission-denied");
+            if (modal) modal.style.display = "flex";
+        }
+    },
 
-              adminBtn?.classList.add("hidden");
-
-              usersBtn?.classList.add("hidden");
-          }
+    closePermissionModal: function() {
+        const modal = document.getElementById("modal-permission-denied");
+        if (modal) modal.style.display = "none";
     },
       
       logout: async function() {
@@ -691,19 +851,47 @@
 
     // Screen router logic
     showScreen: function(screenId) {
+        // const role = localStorage.getItem( "userRole" );
+
+        // if (screenId === "screen-admin" && role !== "admin") {
+        //     utils.showToast( "Admin Access Only" );
+        //     return;
+        // }
+
+        // // if (screenId === "screen-users" && role !== "admin") {
+        // //     utils.showToast("Admin Access Only");
+        // //     return;
+        // // }
+        // if (screenId === "screen-admin" && role !== "admin" && role !== "superadmin") {
+        //     utils.showToast( "Admin Access Only" );
+        //     return;
+        // }
+
+        // if (screenId === "screen-users" && role !== "admin" && role !== "superadmin") {
+        //     utils.showToast("Admin Access Only");
+        //     return;
+        // }
+
+        // const screens =document.querySelectorAll(".screen");
+
         const role = localStorage.getItem( "userRole" );
 
-        if (screenId === "screen-admin" && role !== "admin") {
-            utils.showToast( "Admin Access Only" );
-            return;
-        }
-
-        if (screenId === "screen-users" && role !== "admin") {
+    if (screenId === "screen-admin" && role !== "superadmin") {
+        if (role === "admin") {
+            const modal = document.getElementById("modal-permission-denied");
+            if (modal) modal.style.display = "flex";
+        } else {
             utils.showToast("Admin Access Only");
-            return;
         }
+        return;
+    }
 
-        const screens =document.querySelectorAll(".screen");
+    if (screenId === "screen-users" && role !== "admin" && role !== "superadmin") {
+        utils.showToast("Admin Access Only");
+        return;
+    }
+
+    const screens = document.querySelectorAll(".screen");
         
         screens.forEach(s => s.classList.add("hidden"));
 
@@ -781,11 +969,11 @@
           <div class="form-row">
             <div class="form-group col">
               <label for="input-date">Meeting Date</label>
-              <input type="text" id="input-date" placeholder="16th June 2026">
+              <input type="text" id="input-date" value="16th June 2026">
             </div>
             <div class="form-group col">
               <label for="input-time">Meeting Time</label>
-              <input type="text" id="input-time" placeholder = "Saturday, 12:30 PM">
+              <input type="text" id="input-time" value="${settings.defaultTime || ''}">
             </div>
           </div>
           <div class="form-group">
@@ -793,8 +981,14 @@
             <input type="text" id="input-venue" placeholder = "Pune">
           </div>
           <div class="form-group">
-            <label for="input-cta">CTA Button Text</label>
-            <input type="text" id="input-cta" placeholder = "Register Now">
+            <label for="input-price">Visitor Pass Price (₹)</label>
+            <div class="price-input-wrapper">
+                <input type="number" id="input-price" placeholder="599" min="599">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="input-cta">What should the button say?</label>
+            <input type="text" id="input-cta" value="${settings.defaultCta || ''}">
           </div>
         `;
       } else if (category === 'weekly_meeting') {
@@ -812,11 +1006,11 @@
           <div class="form-row">
             <div class="form-group col">
               <label for="input-date">Meeting Date</label>
-              <input type="text" id="input-date" placeholder="16th June 2026">
+              <input type="text" id="input-date" value="16th June 2026">
             </div>
             <div class="form-group col">
               <label for="input-time">Meeting Time</label>
-              <input type="text" id="input-time" placeholder="Saturday, 12:30 PM">
+              <input type="text" id="input-time" value="${settings.defaultTime || ''}">
             </div>
           </div>
           <div class="form-group">
@@ -824,8 +1018,15 @@
             <input type="text" id="input-venue" placeholder = "Pune">
           </div>
           <div class="form-group">
+            <label for="input-price">Visitor Pass Price (₹)</label>
+            <div class="price-input-wrapper">
+                <input type="number" id="input-price" placeholder="599" min="599">
+            </div>
+          </div>
+
+          <div class="form-group">
             <label for="input-cta">CTA Button Text</label>
-            <input type="text" id="input-cta" placeholder = "Book Your Spot">
+            <input type="text" id="input-cta" value="${settings.defaultCta || ''}">
           </div>
         `;
       } else if (category === 'feature_presentation') {
@@ -853,11 +1054,11 @@
           <div class="form-row">
             <div class="form-group col">
               <label for="input-date">Presentation Date</label>
-              <input type="text" id="input-date" placeholder="16th June 2026">
+              <input type="text" id="input-date" value="16th June 2026">
             </div>
             <div class="form-group col">
               <label for="input-time">Meeting Time</label>
-              <input type="text" id="input-time" placeholder="Saturday, 12:30 PM"">
+              <input type="text" id="input-time" value="${settings.defaultTime || ''}">
             </div>
           </div>
           <div class="form-group">
@@ -865,8 +1066,15 @@
             <input type="text" id="input-venue" placeholder = "Pune"">
           </div>
           <div class="form-group">
+            <label for="input-price">Visitor Pass Price (₹)</label>
+            <div class="price-input-wrapper">
+                <input type="number" id="input-price" placeholder="599" min="599">
+            </div>
+          </div>
+
+          <div class="form-group">
             <label for="input-cta">CTA Button Text</label>
-            <input type="text" id="input-cta" placeholder = "Attend the Session">
+            <input type="text" id="input-cta" value="${settings.defaultCta || ''}">
           </div>
         `;
       }
@@ -922,6 +1130,7 @@
             time: document.getElementById('input-time') ? document.getElementById('input-time').value.trim() : settings.defaultTime,
 
             venue: document.getElementById('input-venue') ? document.getElementById('input-venue').value.trim() : settings.defaultVenue,
+            visitorPrice: document.getElementById('input-price') ? document.getElementById('input-price').value.trim() : '',
 
             cta: document.getElementById('input-cta') ? document.getElementById('input-cta').value.trim() : settings.defaultCta,
 
@@ -975,6 +1184,7 @@
                     copy.time = payload.time;
                     copy.venue = payload.venue;
                     copy.cta = payload.cta;
+                    copy.visitorPrice = payload.visitorPrice;
                         // Save original form inputs
                     copy.category = this.state.activeCategory;
 
@@ -1074,7 +1284,6 @@
         const copy = this.state.generatedCopy;
         if (!copy) return;
 
-        // ✅ Directly value ma set karo - placeholder nahi
         document.getElementById('edit-headline').value = copy.headline || '';
         document.getElementById('edit-subheadline').value = copy.subheadline || '';
         document.getElementById('edit-cta').value = copy.cta || '';
@@ -1125,7 +1334,6 @@
         const copy = this.state.generatedCopy;
         if (!copy) return;
 
-        // ✅ value hoy to use karo, nahi to placeholder (AI generated) use karo
         const headlineEl = document.getElementById('edit-headline');
         const subheadlineEl = document.getElementById('edit-subheadline');
         const ctaEl = document.getElementById('edit-cta');
@@ -1208,6 +1416,7 @@
                     "input-time": data.time || "",
                     "input-venue": data.venue || "",
                     "input-cta": data.cta || "",
+                    "input-price": data.visitorPrice || "",
                     "input-speaker-name": data.speakerName || "",
                     "input-company-name": data.companyName || "",
                     "input-topic": data.topic || "",
@@ -1364,6 +1573,7 @@
                 bulletPoints: copy.bulletPoints || [],
                 cta: copy.cta || "",
                 ctaLink: copy.ctaLink || "",
+                visitorPrice: copy.visitorPrice || "",
 
                 visitorCategory: copy.visitorCategory || "",
                 opportunities: copy.opportunities || "",
@@ -1381,6 +1591,8 @@
 
                 opportunities:
                     document.getElementById("input-opportunities")?.value || "",
+                visitorPrice:
+                    document.getElementById("input-price")?.value || "",
 
                 reason:
                     document.getElementById("input-reason")?.value || "",
@@ -1488,7 +1700,13 @@
         let history = [];
 
         try {
-            if (role === "admin") {
+            // if (role === "admin") {
+            //     history = await api.getAllBanners();
+            // } else {
+            //     history = await api.getUserBanners(uid);
+            // }
+            // fetch logic
+            if (role === "admin" || role === "superadmin") {
                 history = await api.getAllBanners();
             } else {
                 history = await api.getUserBanners(uid);
@@ -1629,16 +1847,27 @@
                     }
                 }
 
-                const actions = role === "admin"
-                    ? `
-                        <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
-                        <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
-                    `
-                    : `
-                        <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
-                        <button class="btn-secondary btn-sm" onclick="app.loadHistoryToWorkspace('${item.id}')"> Edit </button>
-                        <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
-                    `;
+                // const actions = role === "admin"
+                //     ? `
+                //         <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
+                //         <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
+                //     `
+                //     : `
+                //         <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
+                //         <button class="btn-secondary btn-sm" onclick="app.loadHistoryToWorkspace('${item.id}')"> Edit </button>
+                //         <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
+                //     `;
+                // action buttons
+            const actions = (role === "admin" || role === "superadmin")
+                ? `
+                    <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
+                    <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
+                `
+                : `
+                    <button class="btn-primary btn-sm" onclick="app.redownloadHistory('${item.id}')"> Download </button>
+                    <button class="btn-secondary btn-sm" onclick="app.loadHistoryToWorkspace('${item.id}')"> Edit </button>
+                    <button class="btn-text btn-sm" style="color: var(--error);" onclick="app.deleteHistory('${item.id}')"> Delete </button>
+                `;
 
                 const thumbnailHtml = item.imageUrl
                     ? `<img src="${item.imageUrl}" class="history-thumb-img" alt="Banner Thumbnail" >`
@@ -1855,6 +2084,7 @@
                         date: copy.date || "",
                         time: copy.time || "",
                         venue: copy.venue || "",
+                        visitorPrice: copy.visitorPrice || "",
                         cta: copy.cta || "",
                         ctaLink: copy.ctaLink || "",
                         speakerName: copy.speakerName || "",
@@ -1909,6 +2139,7 @@
                 subheadline: copy.subheadline,
                 cta: copy.cta,
                 ctaLink: copy.ctaLink,
+                visitorPrice: copy.visitorPrice || "",
                 bulletPoints: copy.bulletPoints
             }
         );
@@ -1949,13 +2180,15 @@
             date: savedFormData.date || savedCopy.date || "",
             time: savedFormData.time || savedCopy.time || "",
             venue: savedFormData.venue || savedCopy.venue || "",
+            visitorPrice: savedFormData.visitorPrice || savedCopy.visitorPrice || "",
             cta: savedFormData.cta || savedCopy.cta || "",
             ctaLink: savedFormData.ctaLink || savedCopy.ctaLink || "",
             bulletPoints: savedFormData.bulletPoints || savedCopy.bulletPoints || []
         };
 
         console.log("EDIT COPY:", this.state.generatedCopy);
-
+        console.log("VISITOR PRICE:", this.state.generatedCopy.visitorPrice);
+        
         this.showScreen("screen-copy-review");
 
         setTimeout(() => {
